@@ -3,16 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>排列組合互動學習：捆綁法與插空法 (單行升級版)</title>
+    <title>排列組合互動學習：捆綁法與插空法 (全功能最終版)</title>
     <style>
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f7f6; padding: 20px; color: #333; }
-        h1 { text-align: center; color: #2c3e50; font-size: 24px; }
-        .controls { text-align: center; margin-bottom: 20px; }
+        h1 { text-align: center; color: #2c3e50; font-size: 24px; margin-bottom: 15px;}
+        .controls { text-align: center; margin-bottom: 15px; }
         button { padding: 10px 20px; font-size: 16px; margin: 5px; cursor: pointer; border: none; border-radius: 5px; background-color: #3498db; color: white; transition: 0.3s; box-shadow: 0 2px 5px rgba(0,0,0,0.2);}
         button:hover { background-color: #2980b9; transform: translateY(-2px); }
         button.active { background-color: #e74c3c; box-shadow: inset 0 3px 5px rgba(0,0,0,0.2); transform: none;}
         
-        .workspace { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); min-height: 350px; }
+        .workspace { background: white; padding: 15px 20px; border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); min-height: 350px; }
         .description { text-align: center; font-size: 16px; margin-bottom: 10px; color: #555; line-height: 1.5; }
         .highlight-text { color: #e74c3c; font-weight: bold; }
         
@@ -20,27 +20,32 @@
         .pool { display: flex; justify-content: center; gap: 10px; margin-bottom: 20px; min-height: 60px; padding: 15px; background: #ecf0f1; border-radius: 8px; flex-wrap: wrap; border: 2px dashed #bdc3c7;}
         
         /* 座位區域設計 - 強制單行不換行 */
-        .row-container { width: 100%; overflow-x: auto; padding-bottom: 15px; } /* 允許左右滑動 */
+        .row-container { width: 100%; overflow-x: auto; padding-bottom: 15px; }
         .row { display: flex; justify-content: flex-start; gap: 8px; align-items: center; flex-wrap: nowrap; min-height: 80px; width: max-content; margin: 0 auto; padding: 0 10px;}
         
         /* 座位/空隙設計 */
         .slot { border-radius: 8px; display: flex; justify-content: center; align-items: center; background: #fafafa; transition: 0.2s; flex-shrink: 0;}
-        .slot.generic { border: 2px dashed #95a5a6; height: 65px; width: 165px; } /* 捆綁法的大座位 */
+        .slot.generic { border: 2px dashed #95a5a6; height: 65px; width: 220px; } /* 捆綁法的大座位，加寬以容納把手 */
         .slot.boy-seat { border: 2px solid #3498db; background: #ebf5fb; width: 55px; height: 55px; }
         .slot.girl-gap { border: 2px dashed #e67e22; background: #fdf2e9; border-radius: 50%; width: 50px; height: 50px; }
         .slot.highlight { transform: scale(1.05); box-shadow: 0 0 10px rgba(241, 196, 15, 0.8); background-color: #fcf3cf;}
         
         /* 人物設計 */
-        .person { width: 45px; height: 45px; display: flex; justify-content: center; align-items: center; color: white; font-weight: bold; cursor: grab; user-select: none; box-shadow: 0 3px 6px rgba(0,0,0,0.3); font-size: 14px; flex-shrink: 0;}
+        .person { width: 45px; height: 45px; display: flex; justify-content: center; align-items: center; color: white; font-weight: bold; cursor: grab; user-select: none; box-shadow: 0 3px 6px rgba(0,0,0,0.3); font-size: 14px; flex-shrink: 0; transition: transform 0.1s;}
         .person:active { cursor: grabbing; transform: scale(0.95); }
-        .boy { background-color: #3498db; border-radius: 8px; /* 男生是正方形 */ }
-        .girl { background-color: #e74c3c; border-radius: 50%; /* 女生是圓形 */ }
+        .boy { background-color: #3498db; border-radius: 8px; }
+        .girl { background-color: #e74c3c; border-radius: 50%; }
         
-        /* 捆綁包設計 (微調尺寸以適應單行) */
-        .bundle-box { display: flex; gap: 2px; padding: 4px; background: rgba(52, 152, 219, 0.2); border: 3px solid #2980b9; border-radius: 8px; cursor: grab; align-items: center; height: 45px; box-sizing: border-box;}
-        .bundle-box .person { width: 18px; height: 26px; font-size: 10px; pointer-events: none; border-radius: 4px; box-shadow: none;}
+        /* 捆綁包設計 (加入拖拉把手與內部排列) */
+        .bundle-box { display: flex; padding: 4px; background: rgba(52, 152, 219, 0.15); border: 3px solid #2980b9; border-radius: 8px; cursor: grab; align-items: center; height: 45px; box-sizing: border-box; box-shadow: 0 4px 6px rgba(0,0,0,0.15);}
+        .bundle-handle { background: #2980b9; color: white; height: 100%; display: flex; align-items: center; padding: 0 5px; margin-right: 6px; border-radius: 4px; font-weight: bold; font-size: 14px; cursor: grab; user-select: none;}
+        .bundle-boys { display: flex; gap: 3px; }
+        .bundle-boys .person { width: 20px; height: 28px; font-size: 10px; border-radius: 4px; box-shadow: none; cursor: grab;}
         
-        .formula { text-align: center; font-size: 20px; font-weight: bold; margin-top: 20px; color: #27ae60; background: #e8f8f5; padding: 15px; border-radius: 8px; border: 1px solid #a3e4d7;}
+        /* 內部互換的高亮效果 */
+        .highlight-swap { transform: scale(1.1); border: 2px dashed #e67e22; background-color: #f39c12; }
+        
+        .formula { text-align: center; font-size: 20px; font-weight: bold; margin-top: 15px; color: #27ae60; background: #e8f8f5; padding: 15px; border-radius: 8px; border: 1px solid #a3e4d7;}
         
         /* 提示訊息 */
         #msg { text-align: center; color: #e74c3c; font-weight: bold; min-height: 20px; margin-bottom: 10px;}
@@ -70,51 +75,107 @@
     </div>
 
     <script>
-        function showMessage(text) {
+        // 記錄目前拖拉的類型：'bundle' (整個包), 'internal-boy' (包內男生), 'normal' (獨立男女生)
+        let currentDragType = null;
+        let currentDragId = null;
+
+        function showMessage(text, color = "#e74c3c") {
             let msg = document.getElementById('msg');
             msg.innerText = text;
-            setTimeout(() => { msg.innerText = ""; }, 2000);
+            msg.style.color = color;
+            setTimeout(() => { msg.innerText = ""; }, 2500);
         }
 
-        // 拖拽事件功能
-        function allowDrop(ev) {
-            ev.preventDefault();
-            let target = ev.target;
-            if((target.classList.contains('slot') && target.children.length === 0) || target.id === 'pool') {
-                target.classList.add('highlight');
-            }
+        // 兩個DOM元素交換位置的底層邏輯
+        function swapNodes(node1, node2) {
+            let temp = document.createElement("div");
+            node1.parentNode.insertBefore(temp, node1);
+            node2.parentNode.insertBefore(node1, node2);
+            temp.parentNode.insertBefore(node2, temp);
+            temp.parentNode.removeChild(temp);
         }
 
-        function dragLeave(ev) {
-            ev.target.classList.remove('highlight');
-        }
-
+        // 拖拽開始
         function drag(ev) {
+            currentDragId = ev.target.id;
+            
+            if (ev.target.classList.contains('internal-boy')) {
+                currentDragType = 'internal-boy';
+                ev.stopPropagation(); // 防止觸發外層 bundle-box 的拖拉
+            } else if (ev.target.id === 'boys-bundle') {
+                currentDragType = 'bundle';
+            } else {
+                currentDragType = 'normal';
+            }
+            
             ev.dataTransfer.setData("text", ev.target.id);
         }
 
+        // 拖拽經過 (判定是否允許放下)
+        function allowDrop(ev) {
+            ev.preventDefault();
+            let target = ev.target;
+
+            if (currentDragType === 'internal-boy') {
+                // 如果拖拉的是捆綁包內的男生，只允許停在另一個內部男生身上
+                let closestBoy = target.closest('.internal-boy');
+                if (closestBoy && closestBoy.id !== currentDragId) {
+                    closestBoy.classList.add('highlight-swap');
+                }
+            } else {
+                // 如果是正常的元素或整個捆綁包，允許停在空的座位上
+                if((target.classList.contains('slot') && target.children.length === 0) || target.id === 'pool') {
+                    target.classList.add('highlight');
+                }
+            }
+        }
+
+        // 拖拽離開 (移除特效)
+        function dragLeave(ev) {
+            let target = ev.target;
+            target.classList.remove('highlight');
+            let closestBoy = target.closest('.internal-boy');
+            if (closestBoy) closestBoy.classList.remove('highlight-swap');
+        }
+
+        // 放下元素
         function drop(ev) {
             ev.preventDefault();
-            ev.target.classList.remove('highlight');
             
+            // 清除所有高亮特效
+            document.querySelectorAll('.highlight, .highlight-swap').forEach(el => {
+                el.classList.remove('highlight', 'highlight-swap');
+            });
+
             let dataId = ev.dataTransfer.getData("text");
             let draggedElement = document.getElementById(dataId);
             let target = ev.target;
             
             if (!draggedElement) return;
 
-            let isBoy = draggedElement.classList.contains('boy');
-            let isGirl = draggedElement.classList.contains('girl');
+            // 處理：男生內部互換 (7!)
+            if (currentDragType === 'internal-boy') {
+                let targetBoy = target.closest('.internal-boy');
+                if (targetBoy && targetBoy.id !== currentDragId) {
+                    swapNodes(draggedElement, targetBoy);
+                    showMessage("🔄 男生內部互換成功！(這就是 7! 的由來)", "#27ae60");
+                } else {
+                    showMessage("❌ 男生只能在捆綁包內部互換！");
+                }
+                return; // 內部互換完畢，結束操作
+            }
 
-            // 放回待選區
+            // 處理：放回待選區 (Pool)
             if (target.id === 'pool') {
                 target.appendChild(draggedElement);
                 return;
             }
 
-            // 放入座位區
+            // 處理：放入座位區 (Slot)
             if (target.classList.contains('slot') && target.children.length === 0) {
-                // 【防錯機制】
+                let isBoy = draggedElement.classList.contains('boy');
+                let isGirl = draggedElement.classList.contains('girl');
+
                 if (target.classList.contains('boy-seat') && !isBoy) {
                     showMessage("❌ 藍色實線座位是保留給男生(正方形)的！");
                     return;
@@ -132,7 +193,7 @@
             document.getElementById('btnBundle').classList.add('active');
             document.getElementById('btnSlot').classList.remove('active');
             
-            document.getElementById('desc').innerHTML = "<b>捆綁法：</b>將7名<span style='color:#2980b9;'>男生(方形)</span>「綁」成1個大單位。<br>現在你總共只有 <b>6個單位</b> (1大塊男生 + 5名女生)。請將她/他們排成一橫列！";
+            document.getElementById('desc').innerHTML = "<b>捆綁法：</b>拉動左側「⋮⋮」把手來排列 <b>6個大單位(體現 6!)</b>。<br>你可以拖拉包內的單一男生，讓他們<b>內部互換位置 (體現 7!)</b>。";
             document.getElementById('formulaDisplay').innerHTML = "算式：6! (大單位排列) × 7! (男生內部互換) = 3,628,800";
             document.getElementById('msg').innerText = "";
 
@@ -146,12 +207,28 @@
             bundle.id = 'boys-bundle';
             bundle.draggable = true;
             bundle.ondragstart = drag;
+
+            // 捆綁包拖拉把手
+            let handle = document.createElement('div');
+            handle.className = 'bundle-handle';
+            handle.innerHTML = '⋮⋮';
+            handle.title = "拖拉整個大單位";
+            bundle.appendChild(handle);
+
+            // 捆綁包內部的男生 (可互換)
+            let boysContainer = document.createElement('div');
+            boysContainer.className = 'bundle-boys';
             for(let i=1; i<=7; i++){
                 let b = document.createElement('div');
-                b.className = 'person boy';
+                b.className = 'person boy internal-boy';
+                b.id = 'ib'+i;
                 b.innerText = 'B'+i;
-                bundle.appendChild(b);
+                b.draggable = true;  // 允許內部拖拉
+                b.ondragstart = drag;
+                b.title = "拖拉我與其他男生互換";
+                boysContainer.appendChild(b);
             }
+            bundle.appendChild(boysContainer);
             pool.appendChild(bundle);
 
             // 建立5名女生
