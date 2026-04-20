@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>排列組合互動學習：捆綁法與插空法 (單行升級版)</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f7f6; padding: 20px; color: #333; }
+        h1 { text-align: center; color: #2c3e50; font-size: 24px; }
+        .controls { text-align: center; margin-bottom: 20px; }
+        button { padding: 10px 20px; font-size: 16px; margin: 5px; cursor: pointer; border: none; border-radius: 5px; background-color: #3498db; color: white; transition: 0.3s; box-shadow: 0 2px 5px rgba(0,0,0,0.2);}
+        button:hover { background-color: #2980b9; transform: translateY(-2px); }
+        button.active { background-color: #e74c3c; box-shadow: inset 0 3px 5px rgba(0,0,0,0.2); transform: none;}
+        
+        .workspace { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); min-height: 350px; }
+        .description { text-align: center; font-size: 16px; margin-bottom: 10px; color: #555; line-height: 1.5; }
+        .highlight-text { color: #e74c3c; font-weight: bold; }
+        
+        /* 拖拉元素設計 */
+        .pool { display: flex; justify-content: center; gap: 10px; margin-bottom: 20px; min-height: 60px; padding: 15px; background: #ecf0f1; border-radius: 8px; flex-wrap: wrap; border: 2px dashed #bdc3c7;}
+        
+        /* 座位區域設計 - 強制單行不換行 */
+        .row-container { width: 100%; overflow-x: auto; padding-bottom: 15px; } /* 允許左右滑動 */
+        .row { display: flex; justify-content: flex-start; gap: 8px; align-items: center; flex-wrap: nowrap; min-height: 80px; width: max-content; margin: 0 auto; padding: 0 10px;}
+        
+        /* 座位/空隙設計 */
+        .slot { border-radius: 8px; display: flex; justify-content: center; align-items: center; background: #fafafa; transition: 0.2s; flex-shrink: 0;}
+        .slot.generic { border: 2px dashed #95a5a6; height: 65px; width: 165px; } /* 捆綁法的大座位 */
+        .slot.boy-seat { border: 2px solid #3498db; background: #ebf5fb; width: 55px; height: 55px; }
+        .slot.girl-gap { border: 2px dashed #e67e22; background: #fdf2e9; border-radius: 50%; width: 50px; height: 50px; }
+        .slot.highlight { transform: scale(1.05); box-shadow: 0 0 10px rgba(241, 196, 15, 0.8); background-color: #fcf3cf;}
+        
+        /* 人物設計 */
+        .person { width: 45px; height: 45px; display: flex; justify-content: center; align-items: center; color: white; font-weight: bold; cursor: grab; user-select: none; box-shadow: 0 3px 6px rgba(0,0,0,0.3); font-size: 14px; flex-shrink: 0;}
+        .person:active { cursor: grabbing; transform: scale(0.95); }
+        .boy { background-color: #3498db; border-radius: 8px; /* 男生是正方形 */ }
+        .girl { background-color: #e74c3c; border-radius: 50%; /* 女生是圓形 */ }
+        
+        /* 捆綁包設計 (微調尺寸以適應單行) */
+        .bundle-box { display: flex; gap: 2px; padding: 4px; background: rgba(52, 152, 219, 0.2); border: 3px solid #2980b9; border-radius: 8px; cursor: grab; align-items: center; height: 45px; box-sizing: border-box;}
+        .bundle-box .person { width: 18px; height: 26px; font-size: 10px; pointer-events: none; border-radius: 4px; box-shadow: none;}
+        
+        .formula { text-align: center; font-size: 20px; font-weight: bold; margin-top: 20px; color: #27ae60; background: #e8f8f5; padding: 15px; border-radius: 8px; border: 1px solid #a3e4d7;}
+        
+        /* 提示訊息 */
+        #msg { text-align: center; color: #e74c3c; font-weight: bold; min-height: 20px; margin-bottom: 10px;}
+    </style>
+</head>
+<body>
+
+    <h1>🧩 排列組合互動學習套件</h1>
+    <div class="controls">
+        <button id="btnBundle" class="active" onclick="initBundle()">1. 捆綁法 (男生相鄰)</button>
+        <button id="btnSlot" onclick="initSlot()">2. 插空法 (女生不相鄰)</button>
+    </div>
+
+    <div class="workspace">
+        <div id="desc" class="description"></div>
+        <div id="msg"></div>
+        
+        <!-- 存放待拉動元素的區域 -->
+        <div id="pool" class="pool" ondrop="drop(event)" ondragover="allowDrop(event)"></div>
+        
+        <!-- 排列座位的區域 (外層加入 row-container 處理捲軸) -->
+        <div class="row-container">
+            <div id="seats" class="row"></div>
+        </div>
+
+        <div id="formulaDisplay" class="formula"></div>
+    </div>
+
+    <script>
+        function showMessage(text) {
+            let msg = document.getElementById('msg');
+            msg.innerText = text;
+            setTimeout(() => { msg.innerText = ""; }, 2000);
+        }
+
+        // 拖拽事件功能
+        function allowDrop(ev) {
+            ev.preventDefault();
+            let target = ev.target;
+            if((target.classList.contains('slot') && target.children.length === 0) || target.id === 'pool') {
+                target.classList.add('highlight');
+            }
+        }
+
+        function dragLeave(ev) {
+            ev.target.classList.remove('highlight');
+        }
+
+        function drag(ev) {
+            ev.dataTransfer.setData("text", ev.target.id);
+        }
+
+        function drop(ev) {
+            ev.preventDefault();
+            ev.target.classList.remove('highlight');
+            
+            let dataId = ev.dataTransfer.getData("text");
+            let draggedElement = document.getElementById(dataId);
+            let target = ev.target;
+            
+            if (!draggedElement) return;
+
+            let isBoy = draggedElement.classList.contains('boy');
+            let isGirl = draggedElement.classList.contains('girl');
+
+            // 放回待選區
+            if (target.id === 'pool') {
+                target.appendChild(draggedElement);
+                return;
+            }
+
+            // 放入座位區
+            if (target.classList.contains('slot') && target.children.length === 0) {
+                // 【防錯機制】
+                if (target.classList.contains('boy-seat') && !isBoy) {
+                    showMessage("❌ 藍色實線座位是保留給男生(正方形)的！");
+                    return;
+                }
+                if (target.classList.contains('girl-gap') && !isGirl) {
+                    showMessage("❌ 橘色虛線空隙是讓女生(圓形)插空的！");
+                    return;
+                }
+                target.appendChild(draggedElement);
+            }
+        }
+
+        // 初始化：捆綁法
+        function initBundle() {
+            document.getElementById('btnBundle').classList.add('active');
+            document.getElementById('btnSlot').classList.remove('active');
+            
+            document.getElementById('desc').innerHTML = "<b>捆綁法：</b>將7名<span style='color:#2980b9;'>男生(方形)</span>「綁」成1個大單位。<br>現在你總共只有 <b>6個單位</b> (1大塊男生 + 5名女生)。請將她/他們排成一橫列！";
+            document.getElementById('formulaDisplay').innerHTML = "算式：6! (大單位排列) × 7! (男生內部互換) = 3,628,800";
+            document.getElementById('msg').innerText = "";
+
+            let pool = document.getElementById('pool');
+            let seats = document.getElementById('seats');
+            pool.innerHTML = ''; seats.innerHTML = '';
+
+            // 建立男生捆綁包
+            let bundle = document.createElement('div');
+            bundle.className = 'bundle-box';
+            bundle.id = 'boys-bundle';
+            bundle.draggable = true;
+            bundle.ondragstart = drag;
+            for(let i=1; i<=7; i++){
+                let b = document.createElement('div');
+                b.className = 'person boy';
+                b.innerText = 'B'+i;
+                bundle.appendChild(b);
+            }
+            pool.appendChild(bundle);
+
+            // 建立5名女生
+            for(let i=1; i<=5; i++){
+                let g = document.createElement('div');
+                g.className = 'person girl';
+                g.id = 'g'+i;
+                g.draggable = true;
+                g.ondragstart = drag;
+                g.innerText = 'G'+i;
+                pool.appendChild(g);
+            }
+
+            // 建立6個通用大空位 (單行排列)
+            for(let i=1; i<=6; i++){
+                let slot = document.createElement('div');
+                slot.className = 'slot generic';
+                slot.ondrop = drop;
+                slot.ondragover = allowDrop;
+                slot.ondragleave = dragLeave;
+                seats.appendChild(slot);
+            }
+        }
+
+        // 初始化：插空法
+        function initSlot() {
+            document.getElementById('btnSlot').classList.add('active');
+            document.getElementById('btnBundle').classList.remove('active');
+
+            document.getElementById('desc').innerHTML = "<b>插空法：</b>為保證女生不相鄰，需分兩步排成一列。<br>1. 先將7名<span style='color:#2980b9;'>男生(方形)</span>排入藍色座位 <b>(體現 7!)</b><br>2. 再將5名<span class='highlight-text'>女生(圓形)</span>放入男生之間的8個橘色空隙中 <b>(體現 P8,5)</b>。";
+            document.getElementById('formulaDisplay').innerHTML = "算式：7! (安排男生座位) × P(8,5) (女生插空) = 33,868,800";
+            document.getElementById('msg').innerText = "";
+
+            let pool = document.getElementById('pool');
+            let seats = document.getElementById('seats');
+            pool.innerHTML = ''; seats.innerHTML = '';
+
+            // 建立待選男生
+            for(let i=1; i<=7; i++){
+                let b = document.createElement('div');
+                b.className = 'person boy';
+                b.id = 'sb'+i;
+                b.draggable = true;
+                b.ondragstart = drag;
+                b.innerText = 'B'+i;
+                pool.appendChild(b);
+            }
+
+            // 建立待選女生
+            for(let i=1; i<=5; i++){
+                let g = document.createElement('div');
+                g.className = 'person girl';
+                g.id = 'sg'+i;
+                g.draggable = true;
+                g.ondragstart = drag;
+                g.innerText = 'G'+i;
+                pool.appendChild(g);
+            }
+
+            // 建立單行交替座位 (空隙-男生-空隙...)
+            for(let i=1; i<=8; i++){
+                let gapSlot = document.createElement('div');
+                gapSlot.className = 'slot girl-gap';
+                gapSlot.ondrop = drop;
+                gapSlot.ondragover = allowDrop;
+                gapSlot.ondragleave = dragLeave;
+                seats.appendChild(gapSlot);
+
+                if(i < 8) {
+                    let boySeat = document.createElement('div');
+                    boySeat.className = 'slot boy-seat';
+                    boySeat.ondrop = drop;
+                    boySeat.ondragover = allowDrop;
+                    boySeat.ondragleave = dragLeave;
+                    seats.appendChild(boySeat);
+                }
+            }
+        }
+
+        window.onload = initBundle;
+    </script>
+</body>
+</html>
